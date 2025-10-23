@@ -27,6 +27,8 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #6c757d #343a40;
+    --webkit-scrollbar-color: #6c757d #343a40;
+    --webkit-scrollbar-width: thin;
 }
 
 .sidebar::-webkit-scrollbar {
