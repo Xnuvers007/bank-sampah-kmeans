@@ -50,11 +50,14 @@ CREATE TABLE transaksi_tarik (
     id_tarik INT AUTO_INCREMENT PRIMARY KEY,
     id_nasabah INT NOT NULL,
     jumlah_tarik BIGINT NOT NULL,
+    catatan TEXT,
     tanggal_tarik TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     dicatat_oleh INT NOT NULL,     -- id_user admin yang mencatat
     FOREIGN KEY (id_nasabah) REFERENCES nasabah(id_nasabah),
     FOREIGN KEY (dicatat_oleh) REFERENCES users(id_user)
 );
+
+ALTER TABLE transaksi_tarik ADD COLUMN catatan TEXT AFTER jumlah_tarik;
 
 -- 6. Tabel untuk menyimpan definisi klaster (opsional, tapi bagus)
 CREATE TABLE klaster_info (
@@ -82,6 +85,18 @@ CREATE TABLE transaksi_jual (
     FOREIGN KEY (id_sampah) REFERENCES jenis_sampah(id_sampah),
     FOREIGN KEY (id_pengepul) REFERENCES pengepul(id_pengepul),
     FOREIGN KEY (dicatat_oleh) REFERENCES users(id_user)
+);
+
+CREATE TABLE penjualan (
+    id_penjualan INT AUTO_INCREMENT PRIMARY KEY, -- ID unik untuk setiap penjualan
+    id_sampah INT NOT NULL,                      -- ID jenis sampah yang dijual
+    id_pengepul INT NOT NULL,                    -- ID pengepul yang membeli sampah
+    berat DECIMAL(10, 2) NOT NULL,               -- Berat sampah yang dijual (kg)
+    harga_jual_per_kg BIGINT NOT NULL,           -- Harga jual per kg
+    total_pendapatan BIGINT NOT NULL,            -- Total pendapatan (berat * harga_jual_per_kg)
+    tanggal_jual TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Tanggal penjualan
+    FOREIGN KEY (id_sampah) REFERENCES jenis_sampah(id_sampah), -- Relasi ke tabel jenis_sampah
+    FOREIGN KEY (id_pengepul) REFERENCES pengepul(id_pengepul)  -- Relasi ke tabel pengepul
 );
 
 -- Masukkan data awal

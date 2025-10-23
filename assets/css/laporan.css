@@ -1,0 +1,100 @@
+/* Hanya sisakan style untuk PRINT dan elemen spesifik laporan */
+.chart-container { position: relative; height: 350px; overflow: hidden; margin-bottom: 20px; }
+#profitChartContainer { height: 350px; max-height: 350px; overflow: hidden; }
+.card { border-radius: 10px; margin-bottom: 1.5rem; transition: all 0.3s; }
+.card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); }
+.card-header { background-color: white; border-bottom: 1px solid rgba(0,0,0,0.05); font-weight: 600; padding: 1rem 1.25rem; display: flex; align-items: center; }
+.card-header i { margin-right: 0.5rem; color: var(--primary); }
+.nav-tabs { border-bottom: 2px solid #e9ecef; margin-bottom: 1rem; }
+.nav-tabs .nav-link { border: none; color: #6c757d; font-weight: 500; padding: 0.75rem 1rem; margin-right: 0.5rem; border-radius: 0; }
+.nav-tabs .nav-link.active { color: var(--primary); border-bottom: 2px solid var(--primary); background: transparent; }
+.table { background-color: white; }
+.table thead th { background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057; }
+.progress { height: 10px; margin-top: 5px; }
+.text-profit { color: #28a745; }
+.text-loss { color: #dc3545; }
+.financial-highlight { font-size: 1.2rem; padding: 0.75rem; border-radius: 5px; margin-bottom: 0.5rem; font-weight: 500; }
+
+@media print {
+    body { background-color: white; }
+    .sidebar, .filter-card, .btn-print, .nav-tabs, .no-print, .page-header .btn, .page-header .user-dropdown { display: none !important; } /* Sembunyikan tombol header saat print */
+    .content { margin-left: 0; padding: 0; }
+    .card { border: 1px solid #ddd; box-shadow: none; }
+    .print-header { display: block !important; text-align: center; margin-bottom: 20px; }
+    .tab-pane { display: block !important; opacity: 1 !important; }
+    .chart-container { page-break-inside: avoid; }
+    /* Penyesuaian Stat Card untuk Print */
+    .stat-card {
+        background: white !important; /* Hapus gradien */
+        color: black !important;
+        box-shadow: none !important;
+        border: 1px solid #ddd;
+        display: block; /* Kembalikan ke block agar layout print rapi */
+        margin-bottom: 10px; /* Jarak antar card di print */
+    }
+     .stat-card .stat-icon {
+         float: none; /* Hapus float */
+         margin-right: 0;
+         margin-bottom: 10px; /* Jarak ikon ke teks */
+         background-color: transparent !important; /* Hapus warna bg ikon */
+         color: black !important; /* Warna ikon jadi hitam */
+         width: auto; height: auto; font-size: 1.5rem; /* Ukuran ikon normal */
+     }
+     .stat-card .stat-content {
+         overflow: visible; /* Kembalikan ke default */
+     }
+     .stat-card .stat-value, .stat-card .stat-label {
+         color: black !important;
+     }
+     .stat-card .stat-value { font-size: 1.5rem; } /* Kecilkan ukuran font value di print */
+     .stat-card .stat-label { font-size: 0.9rem; }
+}
+.print-header { display: none; }
+
+/* Tambahan: pastikan tinggi chart responsif */
+#trenKeuanganChart, #profitChart { max-height: 300px; }
+
+
+.stat-card {
+    padding: 1.25rem;
+    border-radius: 10px;
+    height: 100%;
+    transition: transform 0.3s;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+.stat-card .icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.8;
+}
+.stat-card .title {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 0.25rem;
+}
+.stat-card .value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    color: white;
+}
+
+.card-green {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+}
+.card-blue {
+    background: linear-gradient(45deg, #007bff, #0dcaf0);
+    color: white;
+}
+.card-red {
+    background: linear-gradient(45deg, #dc3545, #fd7e14);
+    color: white;
+}
+.card-purple {
+    background: linear-gradient(45deg, #6f42c1, #e83e8c);
+    color: white;
+}
+
