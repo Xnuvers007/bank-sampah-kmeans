@@ -1,11 +1,12 @@
 <?php
-// /config/db.php
 
-$host = 'localhost'; // atau 'localhost'
-$db   = 'db_bank_sampah_bu';
-$user = 'root';
-$pass = ''; // Sesuaikan dengan password MySQL Anda
-$charset = 'utf8mb4';
+include 'database.php';
+
+$host = DB_HOST;
+$db   = DB_NAME;
+$user = DB_USER;
+$pass = DB_PASS;
+$charset = DB_CHARSET;
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
