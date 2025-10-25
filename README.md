@@ -85,7 +85,7 @@ Bank Sampah Digital adalah platform web modern yang dirancang untuk memudahkan p
 
 ### Admin
 - **Username**: `admin`
-- **Password**: `admin123`
+- **Password**: `admin`
 
 ### Nasabah Demo
 - **Username**: `siswa1`
