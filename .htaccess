@@ -1,0 +1,132 @@
+# ============================================================
+# HIGH SECURITY .HTACCESS FOR APACHE 2.4+ (XAMPP compatible)
+# Project: bank_sampah
+# Author: ChatGPT (Optimized 2025)
+# ============================================================
+
+# ------------------------------------------------------------
+# BASIC HARDENING
+# ------------------------------------------------------------
+
+# Disable directory listing
+<IfModule mod_autoindex.c>
+  Options -Indexes
+</IfModule>
+
+# Default charset
+AddDefaultCharset UTF-8
+
+# Deny access to hidden/system files (.git, .env, etc.)
+<FilesMatch "^\.">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+</FilesMatch>
+
+# Block sensitive files (config, backups, logs, etc.)
+<FilesMatch "\.(env|ini|log|sql|sh|bak|swp|old|dist|conf|json)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+</FilesMatch>
+
+# Protect sensitive directories
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /bank_sampah/
+
+  # Deny access to internal/private folders
+  RewriteRule ^(config|vendor|storage|backups|\.git|\.svn|node_modules|tests|private)/ - [F,L,NC]
+</IfModule>
+
+# ------------------------------------------------------------
+# SECURITY HEADERS
+# ------------------------------------------------------------
+<IfModule mod_headers.c>
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  Header merge Vary "Accept-Encoding"
+</IfModule>
+
+# Optional: Only if you run HTTPS
+# <IfModule mod_headers.c>
+#   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+# </IfModule>
+
+# ------------------------------------------------------------
+# COMPRESSION (GZIP/DEFLATE)
+# ------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/plain text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
+  # Skip already compressed files
+  SetEnvIfNoCase Request_URI "\.(?:gif|jpe?g|png|webp|avif|woff2?)$" no-gzip=1
+</IfModule>
+
+# ------------------------------------------------------------
+# CACHING RULES
+# ------------------------------------------------------------
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Long cache for static assets
+  ExpiresByType image/avif "access plus 6 months"
+  ExpiresByType image/webp "access plus 6 months"
+  ExpiresByType image/jpeg "access plus 6 months"
+  ExpiresByType image/png  "access plus 6 months"
+  ExpiresByType image/gif  "access plus 6 months"
+  ExpiresByType image/svg+xml "access plus 6 months"
+  ExpiresByType font/woff2 "access plus 6 months"
+  ExpiresByType font/woff  "access plus 6 months"
+  ExpiresByType text/css   "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+
+  # Default: HTML/PHP no cache
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|json|png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?)$">
+    Header set Cache-Control "public, max-age=2592000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(html?|php)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+  </FilesMatch>
+</IfModule>
+
+# ------------------------------------------------------------
+# PRETTY URLS (REMOVE .php EXTENSION)
+# ------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /bank_sampah/
+
+  # 1️⃣ Skip existing files or directories
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 2️⃣ Rewrite /something -> /something.php (if .php exists)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME}\.php -f
+  RewriteRule ^(.+?)/?$ $1.php [L,QSA]
+
+  # 3️⃣ Force remove trailing slash
+  RewriteCond %{REQUEST_URI} (.+)/$
+  RewriteRule ^ %1 [R=301,L]
+</IfModule>
+
+# ------------------------------------------------------------
+# MIME NORMALIZATION
+# ------------------------------------------------------------
+AddType image/svg+xml .svg .svgz
+AddEncoding gzip .svgz
+
+# ------------------------------------------------------------
+# OPTIONAL: ERROR DOCUMENTS
+# ------------------------------------------------------------
+ErrorDocument 403 /bank_sampah/error/403.php
+ErrorDocument 404 /bank_sampah/error/404.php
+ErrorDocument 500 /bank_sampah/error/500.php

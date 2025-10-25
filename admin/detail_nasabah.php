@@ -56,7 +56,7 @@ try {
     $stmt_tarik = $pdo->prepare("
         SELECT tt.*, u.username as admin_pencatat
         FROM transaksi_tarik tt
-        LEFT JOIN users u ON tt.dicatat_oleh = u.id_user
+        JOIN users u ON tt.dicatat_oleh = u.id_user
         WHERE tt.id_nasabah = ?
         ORDER BY tt.tanggal_tarik DESC
     ");
