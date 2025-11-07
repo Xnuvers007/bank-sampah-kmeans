@@ -2,6 +2,7 @@
 // /admin/nasabah.php
 require '../config/db.php';
 require '../config/functions.php';
+require '../config/password_helpers.php';
 
 // Wajibkan login sebagai admin
 require_login('admin');
@@ -10,47 +11,56 @@ $pesan = '';
 $error = '';
 
 // Logika untuk menangani form (Create & Update)
-if (isset($_POST['submit'])) {
-    $nama_lengkap = $_POST['nama_lengkap'];
-    $nis = $_POST['nis'];
-    $kelas = $_POST['kelas'];
-    $id_nasabah = $_POST['id_nasabah']; // Untuk update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
+    // Ambil dan sanitize input dari form
+    $nama_lengkap = trim($_POST['nama_lengkap'] ?? '');
+    $nis = trim($_POST['nis'] ?? '');
+    $kelas = trim($_POST['kelas'] ?? '');
+    $id_nasabah = trim($_POST['id_nasabah'] ?? ''); // Kosong = create, ada = update
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? ''); // <-- pastikan terdefinisi sebelum dipakai
 
-    // Untuk Nasabah Baru (Create)
-    if (empty($id_nasabah)) {
-        $username = $_POST['username'];
-        // $password = password_hash($_POST['password'], PASSWORD_DEFAULT); // Hash password
-        // $password = base64_encode($_POST['password']);
-        $password = $_POST['password']; // PERINGATAN: SANGAT TIDAK AMAN
-        $password_hash = password_hash($password, PASSWORD_DEFAULT);
-        
-        try {
-            $pdo->beginTransaction();
-            
-            // 1. Buat user baru
-            $stmt_user = $pdo->prepare("INSERT INTO users (username, password, role) VALUES (:username, :password, 'nasabah')");
-            // $stmt_user->execute(['username' => $username, 'password' => $password]);
-            $stmt_user->execute(['username' => $username, 'password' => $password_hash]);
-            $id_user = $pdo->lastInsertId();
-
-            // 2. Buat nasabah baru
-            $stmt_nasabah = $pdo->prepare("INSERT INTO nasabah (id_user, nis, nama_lengkap, kelas) VALUES (:id_user, :nis, :nama, :kelas)");
-            $stmt_nasabah->execute([
-                'id_user' => $id_user,
-                'nis' => $nis,
-                'nama' => $nama_lengkap,
-                'kelas' => $kelas
-            ]);
-
-            $pdo->commit();
-            $pesan = "Nasabah baru berhasil ditambahkan.";
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $error = "Gagal menambahkan nasabah: " . $e->getMessage();
-        }
+    // Validasi minimal
+    if ($nama_lengkap === '' || $nis === '' || $username === '' || (empty($id_nasabah) && $password === '')) {
+        $error = 'Lengkapi semua field yang wajib.';
     }
-    // Untuk Update Nasabah
-    else {
+
+    if (empty($error)) {
+        // Create new nasabah
+        if (empty($id_nasabah)) {
+            // Validasi password sesuai kebijakan
+            $errs = PasswordPolicy::validate($password);
+            if (!empty($errs)) {
+                $error = implode("\n", $errs);
+            } else {
+                $password_hash = password_hash($password, PASSWORD_DEFAULT);
+                try {
+                    $pdo->beginTransaction();
+
+                    // Cek username unik
+                    $chk = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = ?");
+                    $chk->execute([$username]);
+                    if ($chk->fetchColumn() > 0) {
+                        throw new Exception('Username sudah digunakan.');
+                    }
+
+                    // Insert user
+                    $stmt_user = $pdo->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, 'nasabah')");
+                    $stmt_user->execute([$username, $password_hash]);
+                    $id_user = $pdo->lastInsertId();
+
+                    // Insert nasabah
+                    $stmt_nasabah = $pdo->prepare("INSERT INTO nasabah (id_user, nis, nama_lengkap, kelas) VALUES (?, ?, ?, ?)");
+                    $stmt_nasabah->execute([$id_user, $nis, $nama_lengkap, $kelas]);
+
+                    $pdo->commit();
+                    $pesan = 'Nasabah baru berhasil ditambahkan.';
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $error = 'Gagal menambahkan nasabah: ' . $e->getMessage();
+                }
+            }
+        } else {
         try {
             $stmt = $pdo->prepare("UPDATE nasabah SET nama_lengkap = :nama, nis = :nis, kelas = :kelas WHERE id_nasabah = :id");
             $stmt->execute([
@@ -64,6 +74,7 @@ if (isset($_POST['submit'])) {
             $error = "Gagal memperbarui nasabah: " . $e->getMessage();
         }
     }
+}
 }
 
 // Logika untuk Delete
@@ -147,6 +158,7 @@ $nasabah_list = $stmt->fetchAll();
         <?php if ($error): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i> <?= $error ?>
+            <?= nl2br(htmlspecialchars($error, ENT_QUOTES, 'UTF-8')) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         <?php endif; ?>
