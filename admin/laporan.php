@@ -1,14 +1,30 @@
 <?php
-// /admin/laporan.php
+
 require '../config/db.php';
 require '../config/functions.php';
+require '../config/csrf.php';
 
 // Wajibkan login sebagai admin
 require_login('admin');
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!CSRF::validateToken($_POST['csrf_token'] ?? '')) {
+        $_SESSION['error'] = "Token keamanan tidak valid. Silakan coba lagi.";
+        header("Location: laporan.php");
+        exit;
+    }
+}
+
+
 // Tentukan rentang tanggal default (bulan ini)
-$tanggal_mulai = $_GET['start'] ?? date('Y-m-01');
-$tanggal_akhir = $_GET['end'] ?? date('Y-m-t');
+$tanggal_mulai = isset($_GET['start']) ? htmlspecialchars($_GET['start'], ENT_QUOTES, 'UTF-8') : date('Y-m-01');
+$tanggal_akhir = isset($_GET['end']) ? htmlspecialchars($_GET['end'], ENT_QUOTES, 'UTF-8') : date('Y-m-t');
+
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_mulai) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_akhir)) {
+    $_SESSION['error'] = "Format tanggal tidak valid.";
+    header("Location: laporan.php");
+    exit;
+}
 
 // --- 1. AMBIL DATA RINGKASAN ---
 $query_ringkasan = "
@@ -285,6 +301,7 @@ if (!function_exists('format_rupiah')) {
         <div class="card mb-4 filter-card">
             <div class="card-body">
                 <form method="GET" action="laporan.php" class="row g-3 align-items-end">
+                    <?= CSRF::getTokenField() ?>
                     <div class="col-md-5">
                         <label for="start" class="form-label">Dari Tanggal</label>
                         <input type="date" class="form-control" id="start" name="start" value="<?= htmlspecialchars($tanggal_mulai) ?>">

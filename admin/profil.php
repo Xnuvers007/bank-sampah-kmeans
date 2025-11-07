@@ -2,6 +2,7 @@
 // /admin/profil.php
 require '../config/db.php';
 require '../config/functions.php';
+require '../config/password_helpers.php';
 
 // Wajibkan login sebagai admin
 require_login('admin');
@@ -13,43 +14,46 @@ $username = $_SESSION['username'];
 
 // Proses ganti password
 if (isset($_POST['submit_password'])) {
-    $password_lama = $_POST['password_lama'];
-    $password_baru = $_POST['password_baru'];
-    $konfirmasi_password = $_POST['konfirmasi_password'];
+    $password_lama = $_POST['password_lama'] ?? '';
+    $password_baru = $_POST['password_baru'] ?? '';
+    $konfirmasi_password = $_POST['konfirmasi_password'] ?? '';
+
+    // Basic empty check
+    if (empty($password_lama) || empty($password_baru) || empty($konfirmasi_password)) {
+        $error = "Semua field harus diisi.";
+    }
+
+    // Gunakan PasswordPolicy::validate yang mengembalikan array errors
+    if (empty($error)) {
+        $errs_new = PasswordPolicy::validate($password_baru);
+        if (!empty($errs_new)) {
+            $error = implode(' ', $errs_new); // gabungkan pesan error jadi string
+        }
+    }
+
+    // Cukup cek kecocokan konfirmasi (jangan panggil validate lagi untuk konfirmasi)
+    if (empty($error) && $password_baru !== $konfirmasi_password) {
+        $error = "Password baru dan konfirmasi password tidak cocok.";
+    }
 
     // Ambil password saat ini dari DB (plain text, tidak aman!)
-    $stmt = $pdo->prepare("SELECT password FROM users WHERE id_user = ?");
-    $stmt->execute([$user_id]);
-    $current_password_db = $stmt->fetchColumn();
+    if (empty($error)) {
+        // Ambil password saat ini dari DB
+        $stmt = $pdo->prepare("SELECT password FROM users WHERE id_user = ?");
+        $stmt->execute([$user_id]);
+        $current_password_db = $stmt->fetchColumn();
 
-    // Validasi
-    // if ($current_password_db !== $password_lama) {
-    if (!password_verify($password_lama, $current_password_db)) {
-        $error = "Password lama yang Anda masukkan salah.";
-    } elseif ($password_baru !== $konfirmasi_password) {
-        $error = "Password baru dan konfirmasi password tidak cocok.";
-    } elseif (strlen($password_baru) < 5) { // Contoh validasi minimal panjang password
-        $error = "Password baru minimal harus 5 karakter.";
-    } else {
-        // Update password baru (plain text, tidak aman!)
-        try {
-            // PERINGATAN: Menyimpan password plain text sangat tidak aman!
-            // Seharusnya gunakan password_hash() seperti ini:
-            // $hashed_password = password_hash($password_baru, PASSWORD_DEFAULT);
-            // $stmt_update = $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?");
-            // $stmt_update->execute([$hashed_password, $user_id]);
-
-            // Sesuai permintaan user (plain text):
-            // $stmt_update = $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?");
-            // $stmt_update->execute([$password_baru, $user_id]);
-
-            // $pesan = "Password berhasil diperbarui.";
-            $hashed_password = password_hash($password_baru, PASSWORD_DEFAULT);
-            $stmt_update = $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?");
-            $stmt_update->execute([$hashed_password, $user_id]);
-            $pesan = "Password berhasil diperbarui.";
-        } catch (Exception $e) {
-            $error = "Gagal memperbarui password: " . $e->getMessage();
+        if (!password_verify($password_lama, $current_password_db)) {
+            $error = "Password lama yang Anda masukkan salah.";
+        } else {
+            try {
+                $hashed_password = password_hash($password_baru, PASSWORD_DEFAULT);
+                $stmt_update = $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?");
+                $stmt_update->execute([$hashed_password, $user_id]);
+                $pesan = "Password berhasil diperbarui.";
+            } catch (Exception $e) {
+                $error = "Gagal memperbarui password: " . $e->getMessage();
+            }
         }
     }
 }
@@ -129,7 +133,7 @@ $user_data = $stmt_user->fetch();
                         <div class="mb-3">
                             <label for="password_baru" class="form-label">Password Baru</label>
                             <input type="password" class="form-control" id="password_baru" name="password_baru" required>
-                            <div class="form-text">Minimal 5 karakter.</div>
+                            <div class="form-text">Minimal 8 karakter.</div>
                         </div>
                         <div class="mb-3">
                             <label for="konfirmasi_password" class="form-label">Konfirmasi Password Baru</label>

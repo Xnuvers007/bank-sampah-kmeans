@@ -1,5 +1,8 @@
 <?php
 session_start();
+
+require_once __DIR__ . '/config/csrf.php';
+
 // Jika sudah login, redirect ke dashboard yang sesuai
 if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] == 'admin') {
@@ -44,7 +47,10 @@ if (isset($_SESSION['user_id'])) {
             justify-content: center;
             padding: 20px;
             position: relative;
-            overflow: hidden;
+            /* overflow: hidden; */
+            overflow-x: hidden;
+            overflow-y: auto;
+            
         }
 
         /* Full Background with Logo */
@@ -94,6 +100,7 @@ if (isset($_SESSION['user_id'])) {
             gap: 80px;
             position: relative;
             z-index: 1;
+            margin: auto;
         }
 
         /* Left Section */
@@ -386,10 +393,16 @@ if (isset($_SESSION['user_id'])) {
 
         /* Responsive Design */
         @media (max-width: 992px) {
+            body {
+                align-items: flex-start; /* Ubah dari center */
+                padding: 40px 20px; /* Tambah padding atas/bawah */
+            }
+
             .main-container {
                 flex-direction: column;
                 gap: 40px;
                 max-width: 480px;
+                margin-top: 0; /* Reset margin top */
             }
 
             .left-section {
@@ -418,6 +431,10 @@ if (isset($_SESSION['user_id'])) {
         }
 
         @media (max-width: 576px) {
+            body {
+                padding: 20px 15px; /* Kurangi padding untuk layar kecil */
+            }
+
             body::before {
                 background-size: contain;
             }
@@ -492,24 +509,25 @@ if (isset($_SESSION['user_id'])) {
                 </div>
 
                 <!-- Error/Success Messages -->
-                <?php if (isset($_SESSION['error'])): ?>
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span><?= $_SESSION['error'] ?></span>
-                    </div>
-                    <?php unset($_SESSION['error']); ?>
-                <?php endif; ?>
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span><?= htmlspecialchars($_SESSION['error'], ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <?php unset($_SESSION['error']); ?>
+            <?php endif; ?>
 
-                <?php if (isset($_SESSION['success'])): ?>
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i>
-                        <span><?= $_SESSION['success'] ?></span>
-                    </div>
-                    <?php unset($_SESSION['success']); ?>
-                <?php endif; ?>
+            <?php if (isset($_SESSION['success'])): ?>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <span><?= htmlspecialchars($_SESSION['success'], ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <?php unset($_SESSION['success']); ?>
+            <?php endif; ?>
 
                 <!-- Login Form -->
                 <form action="login_process.php" method="POST">
+                    <?= CSRF::getTokenField() ?>                    
                     <div class="form-group">
                         <input type="text" class="form-control" name="username" placeholder="Username atau Email" required autofocus>
                         <i class="fas fa-user form-icon"></i>

@@ -1,8 +1,9 @@
 <?php
-// filepath: /C:/xampp/htdocs/bank_sampah/admin/clustering.php
+
 require '../config/db.php';
 require '../config/functions.php';
 require '../lib/KMeans.php';
+require '../config/csrf.php';
 
 require_login('admin');
 
@@ -41,35 +42,57 @@ try {
     $stmt = $pdo->query($query);
     while ($row = $stmt->fetch()) {
         $dataToCluster[] = [(float) $row['total_berat'], (int) $row['frekuensi_setor']];
-        $originalData[] = ['id_nasabah' => $row['id_nasabah'], 'nama_lengkap' => $row['nama_lengkap'], 'kelas' => $row['kelas']];
+        // $originalData[] = ['id_nasabah' => $row['id_nasabah'], 'nama_lengkap' => $row['nama_lengkap'], 'kelas' => $row['kelas']];
+        $originalData[] = ['id_nasabah' => htmlspecialchars($row['id_nasabah']), 'nama_lengkap' => htmlspecialchars($row['nama_lengkap']), 'kelas' => htmlspecialchars($row['kelas'])];
         $nasabahData[] = $row;
     }
 
     // 3. Proses Clustering
-    if (isset($_POST['proses_cluster']) && !empty($dataToCluster)) {
-        
-        $kmeans = new KMeans($K);
-        $kmeans->loadData($dataToCluster, $originalData);
-        $results = $kmeans->run();
-
-        // 4. Simpan hasil ke DB
-        $pdo->beginTransaction();
-        try {
-            $updateStmt = $pdo->prepare("UPDATE nasabah SET id_klaster = :id_klaster WHERE id_nasabah = :id_nasabah");
-            foreach ($results as $clusterIndex => $cluster) {
-                foreach ($cluster['data_points'] as $dataPoint) {
-                    $updateStmt->execute(['id_klaster' => $clusterIndex, 'id_nasabah' => $dataPoint['original']['id_nasabah']]);
-                }
-            }
-            $pdo->commit();
-            header("Location: clustering.php?status=success");
+    if (isset($_POST['proses_cluster'])) {
+        // Validasi CSRF token
+        if (!CSRF::validateToken($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = "Token keamanan tidak valid. Silakan coba lagi.";
+            header("Location: clustering.php");
             exit;
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $error = "Gagal menyimpan hasil clustering: " . $e->getMessage();
+        }
+
+        if (!empty($dataToCluster)) {
+            try {
+                $kmeans = new KMeans($K);
+                $kmeans->loadData($dataToCluster, $originalData);
+                $results = $kmeans->run();
+
+                // Simpan hasil ke DB
+                $pdo->beginTransaction();
+                try {
+                    $updateStmt = $pdo->prepare("UPDATE nasabah SET id_klaster = :id_klaster WHERE id_nasabah = :id_nasabah");
+                    foreach ($results as $clusterIndex => $cluster) {
+                        foreach ($cluster['data_points'] as $dataPoint) {
+                            $updateStmt->execute([
+                                'id_klaster' => $clusterIndex, 
+                                'id_nasabah' => $dataPoint['original']['id_nasabah']
+                            ]);
+                        }
+                    }
+                    $pdo->commit();
+                    
+                    // Regenerate CSRF token setelah operasi sukses
+                    CSRF::regenerateToken();
+                    
+                    header("Location: clustering.php?status=success");
+                    exit;
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $error = "Gagal menyimpan hasil clustering: " . htmlspecialchars($e->getMessage());
+                }
+            } catch (Exception $e) {
+                $error = "Terjadi error saat clustering: " . htmlspecialchars($e->getMessage());
+            }
+        } else {
+            $error = "Tidak ada data untuk diproses.";
         }
     }
-    
+
     // 5. Siapkan data untuk Chart jika proses selesai
     if (isset($_GET['status']) && $_GET['status'] == 'success' && !empty($nasabahData)) {
         $stmt_clustered = $pdo->query("SELECT * FROM nasabah WHERE id_klaster IS NOT NULL");
@@ -114,6 +137,7 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/style.css">
+    <?= CSRF::getMetaTag() ?>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -708,6 +732,7 @@ try {
 
                     <!-- Process Form -->
                     <form method="POST" action="clustering.php" id="clusteringForm">
+                        <?= CSRF::getTokenField() ?>
                         <div class="row align-items-center">
                             <div class="col-md-8">
                                 <div class="mb-3">
@@ -867,8 +892,34 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // ✅ CSRF Token untuk AJAX request (jika diperlukan)
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        // Contoh penggunaan untuk fetch API
+        function makeSecureRequest(url, data) {
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    ...data,
+                    csrf_token: csrfToken
+                })
+            });
+        }
+
         // Show loading on form submit
-        document.getElementById('clusteringForm').addEventListener('submit', function() {
+        document.getElementById('clusteringForm').addEventListener('submit', function(e) {
+            // Validasi token sebelum submit
+            const token = this.querySelector('input[name="csrf_token"]').value;
+            if (!token) {
+                e.preventDefault();
+                alert('Token keamanan tidak valid. Silakan refresh halaman.');
+                return false;
+            }
+            
             document.getElementById('loadingOverlay').classList.add('show');
         });
 
