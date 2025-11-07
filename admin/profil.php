@@ -23,7 +23,8 @@ if (isset($_POST['submit_password'])) {
     $current_password_db = $stmt->fetchColumn();
 
     // Validasi
-    if ($current_password_db !== $password_lama) {
+    // if ($current_password_db !== $password_lama) {
+    if (!password_verify($password_lama, $current_password_db)) {
         $error = "Password lama yang Anda masukkan salah.";
     } elseif ($password_baru !== $konfirmasi_password) {
         $error = "Password baru dan konfirmasi password tidak cocok.";
@@ -39,9 +40,13 @@ if (isset($_POST['submit_password'])) {
             // $stmt_update->execute([$hashed_password, $user_id]);
 
             // Sesuai permintaan user (plain text):
-            $stmt_update = $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?");
-            $stmt_update->execute([$password_baru, $user_id]);
+            // $stmt_update = $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?");
+            // $stmt_update->execute([$password_baru, $user_id]);
 
+            // $pesan = "Password berhasil diperbarui.";
+            $hashed_password = password_hash($password_baru, PASSWORD_DEFAULT);
+            $stmt_update = $pdo->prepare("UPDATE users SET password = ? WHERE id_user = ?");
+            $stmt_update->execute([$hashed_password, $user_id]);
             $pesan = "Password berhasil diperbarui.";
         } catch (Exception $e) {
             $error = "Gagal memperbarui password: " . $e->getMessage();

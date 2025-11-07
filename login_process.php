@@ -1,7 +1,9 @@
 <?php
-// /login_process.php
-
 session_start();
+
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_strict_mode', 1);
+
 require_once __DIR__ . '/config/db.php';
 $db = $pdo; 
 
@@ -19,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // PERINGATAN: INI SANGAT TIDAK AMAN
     // Membandingkan password plain text dari form
     // dengan password plain text dari database
-    if ($user && $user['password'] === $password) {
+    // if ($user && $user['password'] === $password) {
+    if ($user && password_verify($password, $user['password'])) {
         $login_success = true;
     }
 

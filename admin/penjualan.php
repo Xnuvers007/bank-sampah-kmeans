@@ -254,7 +254,7 @@ try {
         .form-floating .form-select {
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 15px;
-            padding: 1.25rem 1rem;
+            /* padding: 1.25rem 1rem; */
             font-size: 1rem;
             transition: all 0.3s ease;
             background: rgba(255,255,255,0.8);

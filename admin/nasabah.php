@@ -22,13 +22,15 @@ if (isset($_POST['submit'])) {
         // $password = password_hash($_POST['password'], PASSWORD_DEFAULT); // Hash password
         // $password = base64_encode($_POST['password']);
         $password = $_POST['password']; // PERINGATAN: SANGAT TIDAK AMAN
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
         
         try {
             $pdo->beginTransaction();
             
             // 1. Buat user baru
             $stmt_user = $pdo->prepare("INSERT INTO users (username, password, role) VALUES (:username, :password, 'nasabah')");
-            $stmt_user->execute(['username' => $username, 'password' => $password]);
+            // $stmt_user->execute(['username' => $username, 'password' => $password]);
+            $stmt_user->execute(['username' => $username, 'password' => $password_hash]);
             $id_user = $pdo->lastInsertId();
 
             // 2. Buat nasabah baru
